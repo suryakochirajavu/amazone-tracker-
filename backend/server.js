@@ -8,7 +8,7 @@ const port = process.env.PORT || 3000;
 app.use(bodyParser.json());
 
 // Telegram Bot details
-const botToken = 'YOUR_TELEGRAM_BOT_TOKEN';  // Replace with your actual token
+const botToken = '7565238718:AAGgWjTEn81YY_h_jTncM3tzc4tWJPdglds';  // Replace with your actual token
 const chatId = '860517021';  // Your Telegram chat ID
 
 app.post('/save-location', async (req, res) => {
